@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenStreetMap with Location Name Only</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.5.0/css/all.min.css" integrity="sha512-QfDd74mlg8afgSqm3Vq2Q65e9b3xMhJB4GZ9OcHDVy1hZ6pqBJPWWnMsKDXM7NINoKqJANNGBuVRIpIJ5dogfA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <style>
+    #map {
+      height: 100vh;
+      width: 100%;
+    }
+    #coordinates {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: white;
+      padding: 10px;
+      border: 1px solid #ccc;
+      z-index: 1000; /* Ensure it appears above the map */
+    }
+  </style>
+</head>
+<body>
+  <div id="coordinates">Click on the map to pin a location.</div>
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // Initialize the map at a default location
+    const defaultLocation = [22.6232, 88.4670]; // Example: Kolkata, India
+
+    // Create the map and set its initial view
+    const map = L.map('map').setView(defaultLocation, 12);
+
+    // Load and display the tile layer from OpenStreetMap
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    let marker; // Variable to store the marker
+
+    // Function to reverse geocode using Nominatim API
+    function getLocationName(lat, lng) {
+      const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`;
+        console.log(url);
+      fetch(url)
+        .then(response => response.json())
+        .then(data => {
+          if (data && data.display_name) {
+            // Display only the location name
+            document.getElementById('coordinates').innerHTML = 
+              `Pinned Location: ${data.display_name}`;
+              $(".leaflet-popup-content").html(`<b>${data.display_name}</b>`);
+            } else {
+                document.getElementById('coordinates').innerHTML = 
+                `Pinned Location: Unable to retrieve location name.`;
+                $(".leaflet-popup-content").html(`<b>Unknown Location</b><br>${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching location name:', error);
+        });
+        $(".leaflet-popup-content").css("width", "200px");
+        $(".leaflet-popup").css("opacity", "1");
+    }
+
+    // Add a click event listener to the map
+    map.on('click', (e) => {
+      const { lat, lng } = e.latlng; // Get the latitude and longitude of the clicked point
+
+      // If a marker already exists, remove it
+      if (marker) {
+        map.removeLayer(marker);
+      }
+
+      // Add a new marker at the clicked location
+      marker = L.marker([lat, lng]).addTo(map)
+        .bindPopup(`<b>Pinned Location</b><br>${lat.toFixed(5)}, ${lng.toFixed(5)}`)
+        .openPopup();
+
+        $(".leaflet-popup-content").html(`<i class="fas fa-spinner"></i>`); 
+        $(".leaflet-popup-content").css("width", "200px");
+        $(".leaflet-popup").css("opacity", "0");
+
+      // Get the location name using reverse geocoding
+      getLocationName(lat, lng);
+
+      // Optionally, center the map on the clicked location
+      map.setView([lat, lng], 15);
+    });
+  </script>
+</body>
+</html>
